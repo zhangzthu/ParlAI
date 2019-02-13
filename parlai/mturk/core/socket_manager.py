@@ -167,12 +167,17 @@ class SocketManager():
     # Default pongs without heartbeat before socket considered dead
     DEF_MISSED_PONGS = 20
     HEARTBEAT_RATE = 4
-    DEF_DEAD_TIME = 30
+    SERVER_STARTUP_DEATH = 30
+
+    # Multiplier for allowing slower network conditions
+    ALLOW_SLOW_MULTIPLIER = 2.5
 
     def __init__(self, server_url, port, alive_callback, message_callback,
                  socket_dead_callback, task_group_id,
-                 socket_dead_timeout=None, server_death_callback=None):
+                 socket_dead_timeout=None, server_death_callback=None,
+                 allow_slow=False):
         """
+        opt:                  dictionary of
         server_url:           url at which the server is to be run
         port:                 port for the socket to operate on
         alive_callback:       function to be called on alive Packets, defined
@@ -184,7 +189,10 @@ class SocketManager():
                               the death and treat the socket as alive defined
                                on_socket_dead(self, worker_id, assignment_id)
         socket_dead_timeout:  time to wait between heartbeats before dying
+        allow_slow:           flag to determine whether or not we should be
+                               extremely lenient with network latency
         """
+        self.latency_mult = self.ALLOW_SLOW_MULTIPLIER if allow_slow else 1
         self.server_url = server_url
         self.port = port
         self.alive_callback = alive_callback
@@ -194,7 +202,7 @@ class SocketManager():
         if socket_dead_timeout is not None:
             self.missed_pongs = 1 + socket_dead_timeout / self.HEARTBEAT_RATE
         else:
-            self.missed_pongs = self.DEF_MISSED_PONGS
+            self.missed_pongs = self.DEF_MISSED_PONGS * self.latency_mult
         self.task_group_id = task_group_id
 
         self.ws = None
@@ -324,18 +332,21 @@ class SocketManager():
                 # Put the packet right back into its place to prevent sending
                 # other packets, then block
                 self._safe_put(connection_id, (send_time, packet))
-                t = time.time() + self.ACK_TIME[packet.type]
+                t = time.time() + \
+                    self.ACK_TIME[packet.type] * self.latency_mult
                 while time.time() < t and packet.status != Packet.STATUS_ACK:
                     time.sleep(shared_utils.THREAD_SHORT_SLEEP)
             else:
                 # non-blocking ack: add ack-check to queue
-                t = time.time() + self.ACK_TIME[packet.type]
+                t = time.time() + \
+                    self.ACK_TIME[packet.type] * self.latency_mult
                 self._safe_put(connection_id, (t, packet))
 
     def _spawn_reaper_thread(self):
         def _reaper_thread(*args):
             start_time = time.time()
-            wait_time = self.DEF_MISSED_PONGS * self.HEARTBEAT_RATE
+            wait_time = \
+                self.DEF_MISSED_PONGS * self.HEARTBEAT_RATE * self.latency_mult
             while time.time() - start_time < wait_time:
                 if self.is_shutdown:
                     return
@@ -495,7 +506,7 @@ class SocketManager():
         time.sleep(1.2)
         start_time = time.time()
         while not self.alive:
-            if time.time() - start_time > self.DEF_DEAD_TIME:
+            if time.time() - start_time > self.SERVER_STARTUP_DEATH:
                 self.server_death_callback()
                 raise ConnectionRefusedError(  # noqa F821 we only support py3
                     'Was not able to establish a connection with the server')

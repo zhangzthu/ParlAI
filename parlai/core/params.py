@@ -233,6 +233,12 @@ class ParlaiParser(argparse.ArgumentParser):
                  ' a heroku server.'
         )
         mturk.add_argument(
+            '--allow-slow', dest='allow_slow', default=False,
+            action='store_true',
+            help='Allow slower than normal connection speeds during what might '
+                 'be considered a server outage.'
+        )
+        mturk.add_argument(
             '--hobby', dest='hobby', default=False, action='store_true',
             help='Run the heroku server on the hobby tier.'
         )

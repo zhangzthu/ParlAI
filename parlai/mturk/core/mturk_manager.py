@@ -495,6 +495,7 @@ class MTurkManager():
             self.task_group_id,
             socket_dead_timeout=timeout_seconds,
             server_death_callback=self.shutdown,
+            allow_slow=self.opt.get('allow_slow', False)
         )
 
     def _on_alive(self, pkt):

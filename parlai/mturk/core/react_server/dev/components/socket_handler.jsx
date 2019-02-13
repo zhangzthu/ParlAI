@@ -41,13 +41,17 @@ const TYPE_ALIVE = 'alive';
 
 /* ================= Local Constants ================= */
 
+const ALLOW_SLOW_MULTIPLIER = 2.5;
+const LATENCY_MULTIPLIER = (ALLOW_SLOW) ? ALLOW_SLOW_MULTIPLIER : 1;
 const SEND_THREAD_REFRESH = 100;
-const ACK_WAIT_TIME = 2000; // Check for acknowledge every 2 seconds
+const ACK_WAIT_TIME = 2000 * LATENCY_MULTIPLIER; // Check acks every 2 seconds
 const STATUS_ACK = 'ack';
 const STATUS_INIT = 'init';
 const STATUS_SENT = 'sent';
-const CONNECTION_DEAD_MISSING_PONGS = 25;
-const REFRESH_SOCKET_MISSING_PONGS = 10;
+const CONNECTION_DEAD_MISSING_HB = 25 * LATENCY_MULTIPLIER;
+const REFRESH_SOCKET_MISSING_HB = 15 * LATENCY_MULTIPLIER;
+const REFRESH_SOCKET_MISSING_PONGS = 3 * LATENCY_MULTIPLIER;
+const CONNECTION_DEAD_MISSING_PONGS = 12 * LATENCY_MULTIPLIER;
 const HEARTBEAT_TIME = 4000;  // One heartbeat every 4 seconds
 
 
@@ -574,7 +578,7 @@ class SocketHandler extends React.Component {
     }
 
     let pongs_without_heartbeat = this.state.pongs_without_heartbeat;
-    if (pongs_without_heartbeat == REFRESH_SOCKET_MISSING_PONGS) {
+    if (pongs_without_heartbeat == REFRESH_SOCKET_MISSING_HB) {
       pongs_without_heartbeat += 1;
       try {
         this.socket.close();  // Force a socket close to make it reconnect
@@ -587,7 +591,7 @@ class SocketHandler extends React.Component {
     }
 
     // Check to see if we've disconnected from the server
-    if (this.state.pongs_without_heartbeat > CONNECTION_DEAD_MISSING_PONGS) {
+    if (this.state.pongs_without_heartbeat > CONNECTION_DEAD_MISSING_HB) {
       this.closeSocket();
       let done_text = ('Our server appears to have gone down during the \
         duration of this HIT. Please send us a message if you\'ve done \
@@ -613,9 +617,11 @@ class SocketHandler extends React.Component {
     this.setState({
       heartbeats_without_pong: this.state.heartbeats_without_pong + 1
     });
-    if (this.state.heartbeats_without_pong >= 12) {
+    if (this.state.heartbeats_without_pong >= CONNECTION_DEAD_MISSING_PONGS) {
       this.closeSocket();
-    } else if (this.state.heartbeats_without_pong >= 3) {
+    } else if (
+      this.state.heartbeats_without_pong >= REFRESH_SOCKET_MISSING_PONGS
+    ) {
       this.props.onStatusChange('reconnecting_router');
     }
   }
