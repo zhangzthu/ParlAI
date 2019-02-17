@@ -28,6 +28,7 @@ from operator import attrgetter
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy
 
 from parlai.core.torch_agent import TorchAgent, Output
 from parlai.core.utils import NEAR_INF, padded_tensor, round_sigfigs, warn_once
@@ -809,7 +810,8 @@ class Beam(object):
         self.n_best_counter = 0
         self.min_n_best = min_n_best
         self.block_ngram = block_ngram
-        self.partial_hyps = [[self.bos] for i in range(beam_size)]
+        #self.partial_hyps = [[self.bos] for i in range(beam_size)]
+        self.partial_hyps = [numpy.array([self.bos]) for i in range(beam_size)]
         self.dist_threshold = dist_threshold
 
     @staticmethod
@@ -827,6 +829,37 @@ class Beam(object):
 
     def get_hamming_dist(self, l1, l2):
         return sum(a != b for a, b in zip(l1, l2))
+
+    def get_hamming_dist2(self, l1, l2):
+        return numpy.count_nonzero(l1!=l2)
+
+    def maybe_block_ngram(self, i):
+        if self.block_ngram > 0:
+            current_hypo = self.partial_hyps[i][1:]
+            current_ngrams = []
+            for ng in range(self.block_ngram):
+                ngrams = Beam.find_ngrams(current_hypo, ng)
+                if len(ngrams) > 0:
+                    current_ngrams.extend(ngrams)
+            counted_ngrams = Counter(current_ngrams)
+            if any(v > 1 for k, v in counted_ngrams.items()):
+                return True
+            else:
+                return False
+
+    def maybe_block_ngram2(self,i,n):
+        if n > 0:
+            current_hypo = self.partial_hyps[i][1:]
+            ngrams = set()
+            gram = []
+            for l in range(len(current_hypo)):
+                gram = (gram + [current_hypo[l].item()])[-n:]
+                if tuple(gram) in ngrams:
+                    return True
+            return False
+        return False
+
+
 
     def advance(self, softmax_probs, hypotheses_stack):
         """Advance the beam one step."""
@@ -846,15 +879,8 @@ class Beam(object):
             beam_scores = (softmax_probs +
                            self.scores.unsqueeze(1).expand_as(softmax_probs))
             for i in range(self.outputs[-1].size(0)):
-                if self.block_ngram > 0:
-                    current_hypo = self.partial_hyps[i][1:]
-                    current_ngrams = []
-                    for ng in range(self.block_ngram):
-                        ngrams = Beam.find_ngrams(current_hypo, ng)
-                        if len(ngrams) > 0:
-                            current_ngrams.extend(ngrams)
-                    counted_ngrams = Counter(current_ngrams)
-                    if any(v > 1 for k, v in counted_ngrams.items()):
+                for n in range(1, self.block_ngram+1):
+                    if self.maybe_block_ngram2(i, n):
                         # block this hypothesis hard
                         beam_scores[i] = -NEAR_INF
                 
@@ -864,9 +890,9 @@ class Beam(object):
                     for prevhyp in hypotheses_stack:
                         if len(prevhyp) < current_hypo_len + 1:
                             continue
-                        dist = self.get_hamming_dist(prevhyp[:current_hypo_len], current_hypo)
+                        dist = self.get_hamming_dist2(prevhyp[:current_hypo_len], current_hypo)
                         if dist < self.dist_threshold:
-                            last_token = prevhyp[current_hypo_len]
+                            last_token = prevhyp[current_hypo_len].item()
                             beam_scores[i][last_token] = -NEAR_INF
                             break
 
