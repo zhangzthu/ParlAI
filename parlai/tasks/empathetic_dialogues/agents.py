@@ -29,7 +29,7 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
     @staticmethod
     def add_cmdline_args(argparser):
         agent = argparser.add_argument_group(
-            'Wizard Dialog Knowledge arguments'
+            'Empathetic Dialogue teacher arguments'
         )
         agent.add_argument(
             '--reactions-only', type='bool', default=True,
