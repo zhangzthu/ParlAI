@@ -234,11 +234,8 @@ class TrainLoop():
         self.save_time = Timer()
         print('[ training... ]')
         self.parleys = 0
-        # self.max_num_epochs = opt['num_epochs'] if opt['num_epochs'] > 0 else float(
-        #     'inf')
         self.max_num_epochs = opt['num_epochs'] if opt['num_epochs'] >= 0 else float(
             'inf')
-        # TODO: revert!
         self.max_train_time = opt['max_train_time'] if opt['max_train_time'] > 0 \
             else float('inf')
         self.log_every_n_secs = opt['log_every_n_secs'] if opt['log_every_n_secs'] > 0 \
@@ -511,6 +508,11 @@ class TrainLoop():
         world = self.world
         with world:
             while True:
+
+                if self.max_num_epochs == 0:
+                    print(f'[ Skipping training because max_num_epochs == 0 ]')
+                    break
+
                 # do one example / batch of examples
                 world.parley()
                 self.parleys += 1
