@@ -130,7 +130,7 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
                 if len(listener_dialog) > 0:
                     self.data.append(listener_dialog)
                 if len(speaker_dialog) > 0 and (
-                    fold == 'train' or self.opt.reactions_only is False
+                    fold == 'train' or self.opt['reactions_only'] is False
                 ):
                     self.data.append(speaker_dialog)
                 listener_dialog = []
