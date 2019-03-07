@@ -26,6 +26,19 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
         self.num_eps = len(self.data)
         self.reset()
 
+    @staticmethod
+    def add_cmdline_args(argparser):
+        agent = argparser.add_argument_group(
+            'Wizard Dialog Knowledge arguments'
+        )
+        agent.add_argument(
+            '--reactions-only', type='bool', default=True,
+            help=(
+                'Only use Listener reactions as examples in the '
+                'validation/test sets'
+            ),
+        )
+
     def num_episodes(self):
         return self.num_eps
 
@@ -116,8 +129,9 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
 
                 if len(listener_dialog) > 0:
                     self.data.append(listener_dialog)
-                if len(speaker_dialog) > 0 and (fold == 'train' or
-                                                self.opt.reactonly is False):
+                if len(speaker_dialog) > 0 and (
+                    fold == 'train' or self.opt.reactions_only is False
+                ):
                     self.data.append(speaker_dialog)
                 listener_dialog = []
                 speaker_dialog = []
