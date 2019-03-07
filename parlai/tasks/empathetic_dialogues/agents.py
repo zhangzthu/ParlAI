@@ -26,19 +26,6 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
         self.num_eps = len(self.data)
         self.reset()
 
-    @staticmethod
-    def add_cmdline_args(argparser):
-        agent = argparser.add_argument_group(
-            'Empathetic Dialogue teacher arguments'
-        )
-        agent.add_argument(
-            '--reactions-only', type='bool', default=True,
-            help=(
-                'Only use Listener reactions as examples in the '
-                'validation/test sets'
-            ),
-        )
-
     def num_episodes(self):
         return self.num_eps
 
@@ -68,9 +55,7 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
         df = open(fpath).readlines()
 
         self.data = []
-        speaker_dialog = []
-        listener_dialog = []
-        j = 0
+        dialog = []
         for i in range(1, len(df)):
 
             cparts = df[i-1].strip().split(",")
@@ -113,33 +98,20 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
                     for f in gettop:
                         ft_cand = f.split("_")[-1] + " " + ft_cand
 
-                if j % 2 == 0:
-                    listener_dialog.append((
-                        contextt, label, prompt, sit, context_emb, cand_emb,
-                        ft_ctx, ft_cand, inline_label_candidates,
-                    ))
-                else:
-                    speaker_dialog.append((
-                        contextt, label, prompt, sit, context_emb, cand_emb,
-                        ft_ctx, ft_cand, inline_label_candidates,
-                    ))
-                j += 1
+                dialog.append((
+                    contextt, label, prompt, sit, context_emb, cand_emb, ft_ctx,
+                    ft_cand, inline_label_candidates,
+                ))
 
             else:
 
-                if len(listener_dialog) > 0:
-                    self.data.append(listener_dialog)
-                if len(speaker_dialog) > 0 and (
-                    fold == 'train' or self.opt['reactions_only'] is False
-                ):
-                    self.data.append(speaker_dialog)
-                listener_dialog = []
-                speaker_dialog = []
-                j = 0
+                if len(dialog) > 0:
+                    self.data.append(dialog)
+                dialog = []
 
     def get(self, episode_idx, entry_idx=0):
         ep = self.data[episode_idx]
-        i = entry_idx
+        i = entry_idx*2
         ep_i = ep[i]
         episode_done = (i >= (len(ep)-2))
         action = {
