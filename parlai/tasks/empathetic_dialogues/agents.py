@@ -55,7 +55,9 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
         df = open(fpath).readlines()
 
         self.data = []
-        dialog = []
+        speaker_dialog = []
+        listener_dialog = []
+        j = 0
         for i in range(1, len(df)):
 
             cparts = df[i-1].strip().split(",")
@@ -98,20 +100,32 @@ class EmpatheticDialogueTeacher(FixedDialogTeacher):
                     for f in gettop:
                         ft_cand = f.split("_")[-1] + " " + ft_cand
 
-                dialog.append((
-                    contextt, label, prompt, sit, context_emb, cand_emb, ft_ctx,
-                    ft_cand, inline_label_candidates,
-                ))
+                if j % 2 == 0:
+                    listener_dialog.append((
+                        contextt, label, prompt, sit, context_emb, cand_emb,
+                        ft_ctx, ft_cand, inline_label_candidates,
+                    ))
+                else:
+                    speaker_dialog.append((
+                        contextt, label, prompt, sit, context_emb, cand_emb,
+                        ft_ctx, ft_cand, inline_label_candidates,
+                    ))
+                j += 1
 
             else:
 
-                if len(dialog) > 0:
-                    self.data.append(dialog)
-                dialog = []
+                if len(listener_dialog) > 0:
+                    self.data.append(listener_dialog)
+                if len(speaker_dialog) > 0 and (fold == 'train' or
+                                                self.opt.reactonly is False):
+                    self.data.append(speaker_dialog)
+                listener_dialog = []
+                speaker_dialog = []
+                j = 0
 
     def get(self, episode_idx, entry_idx=0):
         ep = self.data[episode_idx]
-        i = entry_idx*2
+        i = entry_idx
         ep_i = ep[i]
         episode_done = (i >= (len(ep)-2))
         action = {
