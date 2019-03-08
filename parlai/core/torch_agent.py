@@ -440,6 +440,11 @@ class TorchAgent(Agent):
                  'default to `truncate`'
         )
         agent.add_argument(
+            '--context-truncate', type=int,
+            help='Context input truncation length: if not specified, this will '
+                 'default to `truncate`'
+        )
+        agent.add_argument(
             '--label-truncate', type=int,
             help='Label truncation length: if not specified, this will default '
                  'to `truncate`'
@@ -447,6 +452,14 @@ class TorchAgent(Agent):
         agent.add_argument(
             '-histsz', '--history-size', default=-1, type=int,
             help='Number of past dialog utterances to remember.'
+        )
+        agent.add_argument(
+            '-context', default=True, choices= ['none', 'prepend', 'separate'],
+            help='If "prepend", prepend context field to text input (with newline separation).'
+        )
+        agent.add_argument(
+            '-context_histsz', '--context-history-size', default=-1, type=int,
+            help='Number of past context utterances to remember.'
         )
         agent.add_argument(
             '-pt', '--person-tokens', type='bool', default=False,
@@ -553,6 +566,15 @@ class TorchAgent(Agent):
             opt,
             maxlen=self.text_truncate,
             size=self.histsz,
+            p1_token=self.P1_TOKEN,
+            p2_token=self.P2_TOKEN,
+            dict_agent=self.dict,
+        )
+        self.context_history = self.history_class()(
+            field = 'context',
+            opt,
+            maxlen=self.context_truncate,
+            size=self.context_histsz,
             p1_token=self.P1_TOKEN,
             p2_token=self.P2_TOKEN,
             dict_agent=self.dict,
@@ -955,15 +977,20 @@ class TorchAgent(Agent):
         if 'text_vec' not in obs:
             # text vec is not precomputed, so we set it using the history
             obs['text'] = history.get_history_str()
-            if obs['text'] is not None:
-                obs['text_vec'] = history.get_history_vec()
-
-        # check truncation
-        if 'text_vec' in obs:
+            obs['text_vec'] = self._check_truncate(history.get_history_vec(), truncate, True)
+            if self.opt['context'] != 'none':
+                obs['context'] = history.get_context_history_str()
+                obs['context_vec'] = (
+                    self._check_truncate(context_history.get_history_vec(), truncate, True))
+                if self.context_prepend_to_text:
+                    obs['text'] = obs['context'] + '\n' + obs['text']
+                    obs[text_vec].insert(0, obs[context_vec])
+                else:
+                    obs['context_vec'] = torch.LongTensor(obs['context_vec'])
+                obs['text_vec'] = torch.LongTensor(obs['text_vec'])
+        else:
             obs['text_vec'] = torch.LongTensor(
                 self._check_truncate(obs['text_vec'], truncate, True)
-            )
-
         return obs
 
     def _set_label_vec(self, obs, add_start, add_end, truncate):
@@ -1244,6 +1271,8 @@ class TorchAgent(Agent):
         reply = self.last_reply(use_reply=self.opt.get('use_reply', 'label'))
         # update the history using the observation
         self.history.update_history(observation, add_next=reply)
+        if 'context' in observation:
+            self.context_history.update_history(observation)
         self.observation = observation
         return self.vectorize(self.observation, self.history,
                               text_truncate=self.text_truncate,
