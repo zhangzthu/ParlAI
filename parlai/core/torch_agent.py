@@ -440,11 +440,6 @@ class TorchAgent(Agent):
                  'default to `truncate`'
         )
         agent.add_argument(
-            '--context-truncate', type=int,
-            help='Context input truncation length: if not specified, this will '
-                 'default to `truncate`'
-        )
-        agent.add_argument(
             '--label-truncate', type=int,
             help='Label truncation length: if not specified, this will default '
                  'to `truncate`'
@@ -456,6 +451,11 @@ class TorchAgent(Agent):
         agent.add_argument(
             '-context', default=True, choices= ['none', 'prepend', 'separate'],
             help='If "prepend", prepend context field to text input (with newline separation).'
+        )
+        agent.add_argument(
+            '--context-truncate', type=int,
+            help='Context input truncation length: if not specified, this will '
+                 'default to `truncate`'
         )
         agent.add_argument(
             '-context_histsz', '--context-history-size', default=-1, type=int,
@@ -977,12 +977,13 @@ class TorchAgent(Agent):
         if 'text_vec' not in obs:
             # text vec is not precomputed, so we set it using the history
             obs['text'] = history.get_history_str()
-            obs['text_vec'] = self._check_truncate(history.get_history_vec(), truncate, True)
+            obs['text_vec'] = self._check_truncate(
+                history.get_history_vec(), truncate, True)
             if self.opt['context'] != 'none':
                 obs['context'] = history.get_context_history_str()
-                obs['context_vec'] = (
-                    self._check_truncate(context_history.get_history_vec(), truncate, True))
-                if self.context_prepend_to_text:
+                obs['context_vec'] = (self._check_truncate(
+                    context_history.get_history_vec(), truncate, True))
+                if self.context == 'prepend':
                     obs['text'] = obs['context'] + '\n' + obs['text']
                     obs[text_vec].insert(0, obs[context_vec])
                 else:
