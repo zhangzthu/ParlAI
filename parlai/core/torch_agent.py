@@ -983,6 +983,7 @@ class TorchAgent(Agent):
             if obs['text'] is not None:
                 obs['text_vec'] = self._check_truncate(
                     history.get_history_vec(), truncate, True)
+            # we also use encode a context field, if available
             if self.opt.get('context', 'none') != 'none':
                 obs['context'] = history.get_context_history_str()
                 if obs['context'] is not None:
