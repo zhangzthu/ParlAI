@@ -70,8 +70,15 @@ def main():
         # Set up the sockets and threads to recieve workers
         mturk_manager.ready_to_accept_workers()
 
+        # self-defined Tukers qualification
+        agent_qualifications = [{
+            'QualificationTypeId': '00000000000000000071',
+            'Comparator': 'EqualTo',
+            'LocaleValues': [{'Country': 'SG'}]
+        }]
+
         # Create the hits as specified by command line arguments
-        mturk_manager.create_hits()
+        mturk_manager.create_hits(qualifications=agent_qualifications)
 
         # Check workers eligiblity acts as a filter, and should return
         # the list of all workers currently eligible to work on the task
