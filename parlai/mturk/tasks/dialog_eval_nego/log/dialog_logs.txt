@@ -1,0 +1,90 @@
+--2019-05-17 17:33:55--
+--tag: tag placeholder--
+system utterance [0]
+123
+
+system utterance [1]
+123
+
+system utterance [2]
+345
+
+system utterance [3]
+end
+
+--2019-05-17 17:34:19--
+--tag: tag placeholder--
+system utterance [0]
+123
+
+system utterance [1]
+exit
+
+--2019-05-17 17:34:40--
+--tag: tag placeholder--
+system utterance [0]
+hello
+
+system utterance [1]
+high
+
+system utterance [2]
+end
+
+--2019-05-17 17:37:24--
+--tag: tag placeholder--
+system utterance [0]
+hello
+
+system utterance [1]
+name
+
+system utterance [2]
+hello
+
+system utterance [3]
+end dialog
+
+system utterance [4]
+end
+
+--2019-05-17 17:40:13--
+--tag: tag placeholder--
+system utterance [0]
+1
+
+system utterance [1]
+2
+
+system utterance [2]
+3
+
+system utterance [3]
+4
+
+system utterance [4]
+5
+
+end
+6
+
+--2019-05-17 17:50:36--
+--tag: tag placeholder--
+system utterance [0]
+1
+
+system utterance [1]
+2
+
+system utterance [2]
+3
+
+system utterance [3]
+4
+
+system utterance [4]
+5
+
+end
+<end turn>
+
